@@ -21,4 +21,14 @@ defmodule Vtb.User.Avatar do
   def storage_dir(_, {_, %{id: id}}) when not is_nil(id) do
     "uploads/avatars/#{id}"
   end
+
+  def parse(upload = %Plug.Upload{}) do
+    # TODO
+    raise "Not implemented"
+  end
+
+  def serialize(avatar) do
+    # TODO
+    "Not implemented"
+  end
 end

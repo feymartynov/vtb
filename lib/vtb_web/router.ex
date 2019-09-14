@@ -5,7 +5,12 @@ defmodule VtbWeb.Router do
     plug :accepts, ["json"]
   end
 
-  scope "/api", VtbWeb do
+  scope "/" do
     pipe_through :api
+
+    forward "/graphql", Absinthe.Plug.GraphiQL,
+      schema: VtbWeb.Schema,
+      interface: :simple,
+      context: %{pubsub: VtbWeb.Endpoint}
   end
 end

@@ -4,6 +4,7 @@ defmodule Vtb.Voice do
 
   schema "voices" do
     field :decision, :integer
+    timestamps()
 
     belongs_to :voter, Vtb.User
     belongs_to :topic, Vtb.Topic

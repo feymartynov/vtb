@@ -2,9 +2,8 @@ defmodule VtbWeb.Schema do
   use Absinthe.Schema
   import Absinthe.Resolution.Helpers, only: [dataloader: 1]
   import_types(Absinthe.Plug.Types)
-  import Ecto.Query
 
-  alias Vtb.{Repo, Position, User, Vote, Participant, Topic, Message, Voice}
+  alias Vtb.{Repo, Position, User, Vote, Participant, Topic, Message, Voter}
 
   def context(ctx) do
     loader =
@@ -61,7 +60,9 @@ defmodule VtbWeb.Schema do
     field :id, non_null(:id)
     field :title, non_null(:string)
     field :description, :string
+    field :state, non_null(:string)
     field :deadline, :timestamp
+    field :finish_date, :timestamp
     field :inserted_at, non_null(:timestamp)
     field :creator, non_null(:user), resolve: dataloader(DB)
     field :participants, list_of(:user), resolve: dataloader(DB)
@@ -274,12 +275,23 @@ defmodule VtbWeb.Schema do
       arg(:decision, :integer)
 
       resolve(fn
-        _root, %{topic_id: topic_id} = args, %{context: %{current_user: %User{id: user_id}}} ->
-          with %Topic{vote_id: vote_id} <- Topic |> Repo.get(topic_id),
-               %Participant{} <- Participant |> Repo.get_by(user_id: user_id, vote_id: vote_id) do
-            %Voice{voter_id: user_id} |> Voice.changeset(args) |> Repo.insert()
-          else
-            _ -> {:error, "Unauthorized"}
+        _root, args, %{context: %{current_user: %User{id: user_id}}} ->
+          Voter.vote(args.topic_id, user_id, args.decision)
+
+        _root, _args, _info ->
+          {:error, "Unauthorized"}
+      end)
+    end
+
+    @desc "Cancel vote"
+    field :cancel_vote, :vote do
+      arg(:vote_id, :integer)
+
+      resolve(fn
+        _root, %{vote_id: id}, %{context: %{current_user: %User{}}} ->
+          case Vote |> Repo.get(id) do
+            %Vote{} = vote -> vote |> Ecto.Changeset.change(%{state: "cancelled"}) |> Repo.update()
+            nil -> {:error, "Not found"}
           end
 
         _root, _args, _info ->

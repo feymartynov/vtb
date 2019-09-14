@@ -5,7 +5,9 @@ defmodule Vtb.Vote do
   schema "votes" do
     field :title, :string
     field :description, :string
+    field :state, :string, default: "ongoing"
     field :deadline, :utc_datetime
+    field :finished_at, :utc_datetime
     timestamps()
 
     belongs_to :creator, Vtb.User

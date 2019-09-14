@@ -47,14 +47,14 @@ defmodule Vtb.Repo.Migrations.Initial do
 
     create table(:voices) do
       add :topic_id, references(:topics), null: false
-      add :user_id, references(:users), null: false
+      add :voter_id, references(:users), null: false
       add :decision, :integer, null: false
       timestamps()
     end
 
-    create unique_index(:voices, [:topic_id, :user_id])
+    create unique_index(:voices, [:topic_id, :voter_id])
     create index(:voices, :topic_id)
-    create index(:voices, :user_id)
+    create index(:voices, :voter_id)
 
     create table(:messages) do
       add :topic_id, references(:topics), null: false

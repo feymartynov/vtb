@@ -10,9 +10,17 @@ defmodule Vtb.Attachment do
 
   use Ecto.Schema
   use Arc.Ecto.Schema
+  import Ecto.Changeset
 
   schema "attachments" do
     field :title, :string
     field :file, Definition.Type
+  end
+
+  def changeset(schema, attrs) do
+    schema
+    |> cast(attrs, [:title])
+    |> cast_attachments(attrs, [:file])
+    |> validate_required([:title, :file])
   end
 end

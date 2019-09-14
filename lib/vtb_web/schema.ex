@@ -2,6 +2,7 @@ defmodule VtbWeb.Schema do
   use Absinthe.Schema
   import Absinthe.Resolution.Helpers, only: [dataloader: 1]
   import_types(Absinthe.Plug.Types)
+  import Ecto.Query
 
   alias Vtb.{Repo, Position, User, Vote, Participant, Topic, Message, Voice}
 
@@ -121,8 +122,15 @@ defmodule VtbWeb.Schema do
     end
 
     field :list_votes, non_null(list_of(non_null(:vote))) do
-      resolve(fn _root, _args, _info ->
-        Vote |> Repo.all()
+      resolve(fn
+        _root, _args, %{current_user: %User{id: user_id}} ->
+          Vote
+          |> join(:inner, [v], u in assoc(v, :participants))
+          |> where([v, u], u.id == ^user_id)
+          |> Repo.all()
+
+        _root, _args, _info ->
+          {:error, "Unauthorized"}
       end)
     end
   end
@@ -268,8 +276,13 @@ defmodule VtbWeb.Schema do
       arg(:decision, :integer)
 
       resolve(fn
-        _root, args, %{current_user: user} ->
-          %Voice{voter_id: user.id} |> Voice.changeset(args) |> Repo.insert()
+        _root, %{topic_id: topic_id} = args, %{current_user: %User{id: user_id}} ->
+          with %Topic{vote_id: vote_id} <- Topic |> Repo.get(topic_id),
+               %Participant{} <- Participant |> Repo.get_by(user_id: user_id, vote_id: vote_id) do
+            %Voice{voter_id: user_id} |> Voice.changeset(args) |> Repo.insert()
+          else
+            _ -> {:error, "Unauthorized"}
+          end
 
         _root, _args, _info ->
           {:error, "Unauthorized"}

@@ -44,7 +44,10 @@ defmodule Vtb.MixProject do
       {:arc_ecto, "~> 0.11.0"},
       {:absinthe_ecto, "~> 0.1"},
       {:absinthe_plug, "~> 1.4"},
-      {:dataloader, "~> 1.0"}
+      {:dataloader, "~> 1.0"},
+      {:guardian, "~> 2.0"},
+      {:comeonin, "~> 5.1"},
+      {:bcrypt_elixir, "~> 2.0"}
     ]
   end
 

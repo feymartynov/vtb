@@ -37,6 +37,10 @@ defmodule VtbWeb.Schema do
   # Objects #
   ###########
 
+  object :session do
+    field :jwt, non_null(:string)
+  end
+
   object :position do
     field :id, non_null(:id)
     field :title, non_null(:string)
@@ -134,13 +138,53 @@ defmodule VtbWeb.Schema do
   end
 
   mutation do
+    @desc "Login"
+    field :login, :session do
+      arg(:email, non_null(:string))
+      arg(:password, non_null(:string))
+
+      resolve(fn _root, %{email: email, password: password}, _info ->
+        login_with_email_pass = fn email, given_pass ->
+          user = User |> Repo.get_by(email: String.downcase(email))
+
+          cond do
+            user && Comeonin.Bcrypt.checkpw(given_pass, user.password_hash) -> {:ok, user}
+            user -> {:error, "Incorrect login credentials"}
+            true -> {:error, "User not found"}
+          end
+        end
+
+        with {:ok, user} <- login_with_email_pass.(email, password),
+             {:ok, jwt, _} <- Vtb.Guardian.encode_and_sign(user),
+             {:ok, _} <- user |> Ecto.Changeset.cast(%{jwt: jwt}, [:jwt]) |> Repo.update(),
+             do: {:ok, %{token: jwt}}
+      end)
+    end
+
+    @desc "Logout"
+    field :logout, :user do
+      arg(:id, non_null(:id))
+
+      resolve(fn
+        _root, _args, %{context: %{current_user: user, token: _token}} ->
+          user |> Ecto.Changeset.cast(%{jwt: nil}, [:jwt]) |> Repo.update()
+
+        _root, _args, _info ->
+          {:error, "Please log in first!"}
+      end)
+    end
+
     @desc "Create position"
     field :create_position, :position do
       arg(:title, non_null(:string))
       arg(:weight, :integer)
 
-      resolve(fn _root, args, _info ->
-        %Position{} |> Position.changeset(args) |> Repo.insert()
+      resolve(fn
+        _root, args, %{current_user: _user} ->
+          %Position{} |> Position.changeset(args) |> Repo.insert()
+
+        _root, _args, _info ->
+          {:error, "Unauthorized"}
       end)
     end
 
@@ -150,6 +194,7 @@ defmodule VtbWeb.Schema do
       arg(:middle_name, :string)
       arg(:last_name, :string)
       arg(:avatar, :upload)
+      arg(:password, non_null(:string))
 
       resolve(fn _root, args, _info ->
         %User{} |> User.changeset(args) |> Repo.insert()
@@ -163,8 +208,12 @@ defmodule VtbWeb.Schema do
       arg(:deadline, :timestamp)
       arg(:attachments, list_of(:attachment_params))
 
-      resolve(fn _root, args, _info ->
-        %Vote{} |> Vote.changeset(args) |> Repo.insert()
+      resolve(fn
+        _root, args, %{current_user: user} ->
+          %Vote{creator_id: user.id} |> Vote.changeset(args) |> Repo.insert()
+
+        _root, _args, _info ->
+          {:error, "Unauthorized"}
       end)
     end
 
@@ -173,8 +222,12 @@ defmodule VtbWeb.Schema do
       arg(:vote_id, non_null(:integer))
       arg(:user_id, non_null(:integer))
 
-      resolve(fn _root, args, _info ->
-        %Participant{} |> Participant.changeset(args) |> Repo.insert()
+      authorized_resolve(fn
+        _root, args, %{current_user: _user} ->
+          %Participant{} |> Participant.changeset(args) |> Repo.insert()
+
+        _root, _args, _info ->
+          {:error, "Unauthorized"}
       end)
     end
 
@@ -184,8 +237,12 @@ defmodule VtbWeb.Schema do
       arg(:title, non_null(:string))
       arg(:attachments, list_of(:attachment_params))
 
-      resolve(fn _root, args, _info ->
-        %Topic{} |> Topic.changeset(args) |> Repo.insert()
+      resolve(fn
+        _root, args, %{current_user: _user} ->
+          %Topic{} |> Topic.changeset(args) |> Repo.insert()
+
+        _root, _args, _info ->
+          {:error, "Unauthorized"}
       end)
     end
 
@@ -195,8 +252,12 @@ defmodule VtbWeb.Schema do
       arg(:text, non_null(:string))
       arg(:attachments, list_of(:attachment_params))
 
-      resolve(fn _root, args, _info ->
-        %Message{} |> Message.changeset(args) |> Repo.insert()
+      resolve(fn
+        _root, args, %{current_user: user} ->
+          %Message{author_id: user.id} |> Message.changeset(args) |> Repo.insert()
+
+        _root, _args, _info ->
+          {:error, "Unauthorized"}
       end)
     end
 
@@ -205,8 +266,12 @@ defmodule VtbWeb.Schema do
       arg(:topic_id, :integer)
       arg(:decision, :integer)
 
-      resolve(fn _root, args, _info ->
-        %Voice{} |> Voice.changeset(args) |> Repo.insert()
+      resolve(fn
+        _root, args, %{current_user: user} ->
+          %Voice{voter_id: user.id} |> Voice.changeset(args) |> Repo.insert()
+
+        _root, _args, _info ->
+          {:error, "Unauthorized"}
       end)
     end
   end

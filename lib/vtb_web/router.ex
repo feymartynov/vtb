@@ -3,14 +3,13 @@ defmodule VtbWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug VtbWeb.Auth
   end
 
   scope "/" do
     pipe_through :api
 
-    forward "/graphql", Absinthe.Plug.GraphiQL,
-      schema: VtbWeb.Schema,
-      interface: :simple,
-      context: %{pubsub: VtbWeb.Endpoint}
+    forward "/graphiql", Absinthe.Plug.GraphiQL, schema: VtbWeb.Schema
+    forward "/", Absinthe.Plug, schema: VtbWeb.Schema
   end
 end

@@ -4,6 +4,7 @@ defmodule Vtb.User do
   import Ecto.Changeset
 
   schema "users" do
+    field :email, :string
     field :first_name, :string
     field :middle_name, :string
     field :last_name, :string
@@ -19,10 +20,11 @@ defmodule Vtb.User do
 
   def changeset(schema, attrs) do
     schema
-    |> cast(attrs, [:first_name, :middle_name, :last_name, :position_id, :password])
+    |> cast(attrs, [:email, :first_name, :middle_name, :last_name, :position_id, :password])
     |> cast_attachments(attrs, [:avatar])
     |> foreign_key_constraint(:position_id)
-    |> validate_required([:password])
+    |> validate_required([:email, :password])
+    |> validate_format(:email, ~r/@/)
     |> put_password_hash()
   end
 

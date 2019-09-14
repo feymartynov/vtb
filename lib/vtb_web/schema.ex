@@ -190,11 +190,12 @@ defmodule VtbWeb.Schema do
 
     @desc "Create user"
     field :create_user, :user do
+      arg(:email, non_null(:string))
+      arg(:password, non_null(:string))
       arg(:first_name, :string)
       arg(:middle_name, :string)
       arg(:last_name, :string)
       arg(:avatar, :upload)
-      arg(:password, non_null(:string))
 
       resolve(fn _root, args, _info ->
         %User{} |> User.changeset(args) |> Repo.insert()

@@ -2,16 +2,16 @@ defmodule Vtb.Repo.Migrations.Initial do
   use Ecto.Migration
 
   def change do
-    create table(:position) do
+    create table(:positions) do
       add :title, :text, null: false
-      add :weight, :integer, null: false, default: 1
+      add :weight, :float, null: false, default: 1
     end
 
     create table(:users) do
       add :first_name, :text
       add :middle_name, :text
       add :last_name, :text
-      add :position_id, references(:position)
+      add :position_id, references(:positions)
       add :avatar, :text
       timestamps()
     end

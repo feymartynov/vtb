@@ -177,7 +177,7 @@ defmodule VtbWeb.Schema do
     @desc "Create position"
     field :create_position, :position do
       arg(:title, non_null(:string))
-      arg(:weight, :integer)
+      arg(:weight, :float)
 
       resolve(fn
         _root, args, %{current_user: _user} ->

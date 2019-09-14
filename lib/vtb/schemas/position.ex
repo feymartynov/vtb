@@ -4,7 +4,7 @@ defmodule Vtb.Position do
 
   schema "positions" do
     field :title, :string
-    field :weight, :integer, default: 1
+    field :weight, :float, default: 1.0
   end
 
   def changeset(schema, attrs) do

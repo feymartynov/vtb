@@ -9,7 +9,7 @@ defmodule VtbWeb.Schema do
   def context(ctx) do
     loader =
       Dataloader.new()
-      |> Dataloader.add_source(DB, Dataloader.Ecto.new(Repo, query: & &1))
+      |> Dataloader.add_source(DB, Dataloader.Ecto.new(Repo, query: fn q, _ -> q end))
 
     ctx |> Map.put(:loader, loader)
   end
@@ -24,8 +24,8 @@ defmodule VtbWeb.Schema do
 
   scalar :timestamp do
     description("Timestmap")
-    parse(&DateTime.from_iso8601(&1))
-    serialize(&DateTime.to_iso8601(&1))
+    parse(&NaiveDateTime.from_iso8601(&1))
+    serialize(&NaiveDateTime.to_iso8601(&1))
   end
 
   scalar :avatar do
@@ -53,7 +53,7 @@ defmodule VtbWeb.Schema do
     field :first_name, :string
     field :middle_name, :string
     field :last_name, :string
-    field :position, :position
+    field :position, non_null(:position), resolve: dataloader(DB)
     field :avatar, :avatar
   end
 
@@ -80,6 +80,7 @@ defmodule VtbWeb.Schema do
     field :inserted_at, non_null(:timestamp)
     field :vote, non_null(:vote), resolve: dataloader(DB)
     field :voices, list_of(:voice), resolve: dataloader(DB)
+    field :messages, list_of(:message), resolve: dataloader(DB)
     field :attachments, list_of(:attachment), resolve: dataloader(DB)
   end
 
@@ -111,23 +112,20 @@ defmodule VtbWeb.Schema do
   query do
     field :list_positions, non_null(list_of(non_null(:position))) do
       resolve(fn _root, _args, _info ->
-        Position |> Repo.all()
+        {:ok, Position |> Repo.all()}
       end)
     end
 
     field :list_users, non_null(list_of(non_null(:user))) do
       resolve(fn _root, _args, _info ->
-        User |> Repo.all()
+        {:ok, User |> Repo.all()}
       end)
     end
 
     field :list_votes, non_null(list_of(non_null(:vote))) do
       resolve(fn
-        _root, _args, %{current_user: %User{id: user_id}} ->
-          Vote
-          |> join(:inner, [v], u in assoc(v, :participants))
-          |> where([v, u], u.id == ^user_id)
-          |> Repo.all()
+        _root, _args, %{context: %{current_user: %User{}}} ->
+          {:ok, Vote |> Repo.all()}
 
         _root, _args, _info ->
           {:error, "Unauthorized"}
@@ -156,7 +154,7 @@ defmodule VtbWeb.Schema do
           user = User |> Repo.get_by(email: String.downcase(email))
 
           cond do
-            user && Comeonin.Bcrypt.checkpw(given_pass, user.password_hash) -> {:ok, user}
+            user && Bcrypt.verify_pass(given_pass, user.password_hash) -> {:ok, user}
             user -> {:error, "Incorrect login credentials"}
             true -> {:error, "User not found"}
           end
@@ -165,7 +163,7 @@ defmodule VtbWeb.Schema do
         with {:ok, user} <- login_with_email_pass.(email, password),
              {:ok, jwt, _} <- Vtb.Guardian.encode_and_sign(user),
              {:ok, _} <- user |> Ecto.Changeset.cast(%{jwt: jwt}, [:jwt]) |> Repo.update(),
-             do: {:ok, %{token: jwt}}
+             do: {:ok, %{jwt: jwt}}
       end)
     end
 
@@ -174,7 +172,7 @@ defmodule VtbWeb.Schema do
       arg(:id, non_null(:id))
 
       resolve(fn
-        _root, _args, %{context: %{current_user: user, token: _token}} ->
+        _root, _args, %{context: %{current_user: %User{} = user}} ->
           user |> Ecto.Changeset.cast(%{jwt: nil}, [:jwt]) |> Repo.update()
 
         _root, _args, _info ->
@@ -188,7 +186,7 @@ defmodule VtbWeb.Schema do
       arg(:weight, :float)
 
       resolve(fn
-        _root, args, %{current_user: _user} ->
+        _root, args, %{context: %{current_user: %User{}}} ->
           %Position{} |> Position.changeset(args) |> Repo.insert()
 
         _root, _args, _info ->
@@ -213,12 +211,12 @@ defmodule VtbWeb.Schema do
     @desc "Create vote"
     field :create_vote, :vote do
       arg(:title, non_null(:string))
-      arg(:description, non_null(:string))
+      arg(:description, :string)
       arg(:deadline, :timestamp)
       arg(:attachments, list_of(:attachment_params))
 
       resolve(fn
-        _root, args, %{current_user: user} ->
+        _root, args, %{context: %{current_user: %User{} = user}} ->
           %Vote{creator_id: user.id} |> Vote.changeset(args) |> Repo.insert()
 
         _root, _args, _info ->
@@ -231,8 +229,8 @@ defmodule VtbWeb.Schema do
       arg(:vote_id, non_null(:integer))
       arg(:user_id, non_null(:integer))
 
-      authorized_resolve(fn
-        _root, args, %{current_user: _user} ->
+      resolve(fn
+        _root, args, %{context: %{current_user: %User{}}} ->
           %Participant{} |> Participant.changeset(args) |> Repo.insert()
 
         _root, _args, _info ->
@@ -247,7 +245,7 @@ defmodule VtbWeb.Schema do
       arg(:attachments, list_of(:attachment_params))
 
       resolve(fn
-        _root, args, %{current_user: _user} ->
+        _root, args, %{context: %{current_user: %User{}}} ->
           %Topic{} |> Topic.changeset(args) |> Repo.insert()
 
         _root, _args, _info ->
@@ -262,7 +260,7 @@ defmodule VtbWeb.Schema do
       arg(:attachments, list_of(:attachment_params))
 
       resolve(fn
-        _root, args, %{current_user: user} ->
+        _root, args, %{context: %{current_user: %User{} = user}} ->
           %Message{author_id: user.id} |> Message.changeset(args) |> Repo.insert()
 
         _root, _args, _info ->
@@ -276,7 +274,7 @@ defmodule VtbWeb.Schema do
       arg(:decision, :integer)
 
       resolve(fn
-        _root, %{topic_id: topic_id} = args, %{current_user: %User{id: user_id}} ->
+        _root, %{topic_id: topic_id} = args, %{context: %{current_user: %User{id: user_id}}} ->
           with %Topic{vote_id: vote_id} <- Topic |> Repo.get(topic_id),
                %Participant{} <- Participant |> Repo.get_by(user_id: user_id, vote_id: vote_id) do
             %Voice{voter_id: user_id} |> Voice.changeset(args) |> Repo.insert()

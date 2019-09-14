@@ -10,7 +10,7 @@ defmodule VtbWeb.Auth do
 
   def call(conn, _) do
     case build_context(conn) do
-      {:ok, context} -> conn |> put_private(:absinthe, %{context: context})
+      {:ok, context} -> conn |> Absinthe.Plug.put_options(context: context)
       _ -> conn
     end
   end

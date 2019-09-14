@@ -2,7 +2,7 @@ defmodule Vtb.Topic do
   use Ecto.Schema
   import Ecto.Changeset
 
-  schema "topic" do
+  schema "topics" do
     field :title, :string
     timestamps()
 

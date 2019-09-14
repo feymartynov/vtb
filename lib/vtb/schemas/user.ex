@@ -23,7 +23,7 @@ defmodule Vtb.User do
     |> cast(attrs, [:email, :first_name, :middle_name, :last_name, :position_id, :password])
     |> cast_attachments(attrs, [:avatar])
     |> foreign_key_constraint(:position_id)
-    |> validate_required([:email, :password])
+    |> validate_required([:email, :password, :position_id])
     |> validate_format(:email, ~r/@/)
     |> put_password_hash()
   end
@@ -31,7 +31,7 @@ defmodule Vtb.User do
   defp put_password_hash(changeset) do
     case changeset do
       %Ecto.Changeset{valid?: true, changes: %{password: pass}} ->
-        put_change(changeset, :password_hash, Comeonin.Bcrypt.hashpwsalt(pass))
+        put_change(changeset, :password_hash, Bcrypt.hash_pwd_salt(pass))
 
       _ ->
         changeset

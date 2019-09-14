@@ -111,6 +111,14 @@ defmodule VtbWeb.Schema do
   ###########
 
   query do
+    field :current_user, non_null(:user) do
+      _root, _args, %{context: %{current_user: %User{} = user}} ->
+        {:ok, user}
+
+      _root, _args, _info ->
+        {:error, "Unauthorized"}
+    end
+
     field :list_positions, non_null(list_of(non_null(:position))) do
       resolve(fn _root, _args, _info ->
         {:ok, Position |> Repo.all()}

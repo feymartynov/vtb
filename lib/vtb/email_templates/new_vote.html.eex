@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+    </style>
+  </head>
+  <body>
+    <p>
+      Здравствуйте, <%= Vtb.User.full_name(user) %>!
+    </p>
+    <p>
+      Открыто новое голосование "<%= vote.title %>". Требуется Ваше участие.
+    </p>
+  </body>
+</html>

@@ -11,6 +11,10 @@ defmodule Vtb.Voter do
            {:ok, _} <- if(needs_finish?(vote), do: finish(vote), else: {:ok, vote}),
            do: {:ok, voice}
     end)
+    |> case do
+      {:ok, result} -> result
+      other -> other
+    end
   end
 
   defp find_topic(id) do

@@ -18,10 +18,10 @@ defmodule Vtb.Attachment do
   def add_files(parent_schema, nil), do: {:ok, parent_schema}
   def add_files(parent_schema, []), do: {:ok, parent_schema}
 
-  def add_files(parent_schema, attachemnt_attrs) do
+  def add_files(parent_schema, attachment_attrs) do
     result =
       parent_schema.attachments
-      |> Stream.zip(attachemnt_attrs)
+      |> Stream.zip(attachment_attrs)
       |> Enum.reduce_while(:ok, fn {attachment, attrs}, _ ->
         attachment
         |> cast(attrs, [])
@@ -34,6 +34,6 @@ defmodule Vtb.Attachment do
         end
       end)
 
-    with :ok <- result, do: parent_schema |> Repo.preload(:attachments, force: true)
+    with :ok <- result, do: {:ok, parent_schema |> Repo.preload(:attachments, force: true)}
   end
 end

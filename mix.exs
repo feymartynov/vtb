@@ -48,7 +48,9 @@ defmodule Vtb.MixProject do
       {:guardian, "~> 2.0"},
       {:comeonin, "~> 5.1"},
       {:bcrypt_elixir, "~> 2.0"},
-      {:cors_plug, "~> 1.5"}
+      {:cors_plug, "~> 1.5"},
+      {:bamboo, "~> 1.3"},
+      {:bamboo_smtp, "~> 2.0"}
     ]
   end
 

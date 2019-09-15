@@ -4,9 +4,13 @@ defmodule VtbWeb.TopicResolver do
   def create(_root, args, %{context: %{current_user: %User{}}}) do
     Repo.transaction(fn ->
       with {:ok, topic} <- %Topic{} |> Topic.changeset(args) |> Repo.insert() do
-        topic |> Attachment.add_files(args.attachments)
+        topic |> Attachment.add_files(args[:attachments])
       end
     end)
+    |> case do
+      {:ok, result} -> result
+      other -> other
+    end
   end
 
   def create(_root, _args, _info) do

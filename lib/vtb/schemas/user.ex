@@ -18,6 +18,10 @@ defmodule Vtb.User do
     many_to_many :votes, Vtb.Vote, join_through: "participants"
   end
 
+  def full_name(%__MODULE__{first_name: first, middle_name: middle, last_name: last}) do
+    [first, middle, last] |> Stream.filter(& &1) |> Enum.join(" ")
+  end
+
   @fields [:email, :first_name, :middle_name, :last_name, :position_id, :password]
 
   def registration_changeset(schema, attrs) do

@@ -12,8 +12,12 @@ defmodule VtbWeb.VoteResolver do
   def create(_root, args, %{context: %{current_user: %User{} = user}}) do
     Repo.transaction(fn ->
       result = %Vote{creator_id: user.id} |> Vote.changeset(args) |> Repo.insert()
-      with {:ok, vote} <- result, do: vote |> Attachment.add_files(args.attachments)
+      with {:ok, vote} <- result, do: vote |> Attachment.add_files(args[:attachments])
     end)
+    |> case do
+      {:ok, result} -> result
+      other -> other
+    end
   end
 
   def create(_root, _args, _info) do

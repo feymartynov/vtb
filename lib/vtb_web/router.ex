@@ -11,6 +11,6 @@ defmodule VtbWeb.Router do
     pipe_through :api
 
     forward "/graphiql", Absinthe.Plug.GraphiQL, schema: VtbWeb.Schema
-    forward "/", Absinthe.Plug, schema: VtbWeb.Schema
+    forward "/api", Absinthe.Plug, schema: VtbWeb.Schema
   end
 end

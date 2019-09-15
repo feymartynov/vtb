@@ -19,6 +19,7 @@ defmodule Vtb.Vote do
   def changeset(schema, attrs) do
     schema
     |> cast(attrs, [:title, :description, :deadline])
+    |> cast_assoc(:topics)
     |> cast_assoc(:attachments)
     |> validate_required([:title])
   end

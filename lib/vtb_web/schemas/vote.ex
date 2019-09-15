@@ -31,6 +31,7 @@ defmodule VtbWeb.Schema.Vote do
       arg(:title, non_null(:string))
       arg(:description, :string)
       arg(:deadline, :timestamp)
+      arg(:topics, list_of(:topic))
       arg(:attachments, list_of(:attachment_params))
 
       resolve(&VoteResolver.create/3)

@@ -18,12 +18,22 @@ defmodule Vtb.User do
     many_to_many :votes, Vtb.Vote, join_through: "participants"
   end
 
-  def changeset(schema, attrs) do
+  @fields [:email, :first_name, :middle_name, :last_name, :position_id, :password]
+
+  def registration_changeset(schema, attrs) do
     schema
-    |> cast(attrs, [:email, :first_name, :middle_name, :last_name, :position_id, :password])
-    |> cast_attachments(attrs, [:avatar])
+    |> cast(attrs, @fields)
     |> foreign_key_constraint(:position_id)
     |> validate_required([:email, :password, :position_id])
+    |> validate_format(:email, ~r/@/)
+    |> put_password_hash()
+  end
+
+  def profile_changeset(schema, attrs) do
+    schema
+    |> cast(attrs, @fields)
+    |> cast_attachments(attrs, [:avatar])
+    |> foreign_key_constraint(:position_id)
     |> validate_format(:email, ~r/@/)
     |> put_password_hash()
   end

@@ -2,35 +2,29 @@ defmodule VtbWeb.Schema do
   use Absinthe.Schema
   import Absinthe.Resolution.Helpers, only: [dataloader: 1]
   import_types(Absinthe.Plug.Types)
+  import Ecto.Query
 
-  alias Vtb.{Repo, Position, User, Vote, Participant, Topic, Message, Voter}
-
-  def context(ctx) do
-    loader =
-      Dataloader.new()
-      |> Dataloader.add_source(DB, Dataloader.Ecto.new(Repo, query: fn q, _ -> q end))
-
-    ctx |> Map.put(:loader, loader)
-  end
+  alias Vtb.{Repo, Position, User, Vote, Participant, Topic, Message, Attachment, Voter}
 
   def plugins do
     [Absinthe.Middleware.Dataloader | Absinthe.Plugin.defaults()]
   end
 
-  #########
-  # Types #
-  #########
+  def context(ctx) do
+    loader =
+      Dataloader.new()
+      |> Dataloader.add_source(DB, Dataloader.Ecto.new(Repo, query: &scope/2))
 
-  scalar :timestamp do
-    description("Timestmap")
-    parse(&NaiveDateTime.from_iso8601(&1))
-    serialize(&NaiveDateTime.to_iso8601(&1))
+    ctx |> Map.put(:loader, loader)
   end
 
-  scalar :avatar do
-    description("Avatar")
-    parse(&Vtb.User.Avatar.parse/1)
-    serialize(&Vtb.User.Avatar.serialize/1)
+  def scope(query, Topic), do: query |> order_by([t], t.inserted_at)
+  def scope(query, Message), do: query |> order_by([m], m.inserted_at)
+  def scope(query, _), do: query
+
+  scalar :timestamp, name: "Timestamp" do
+    parse(&NaiveDateTime.from_iso8601(&1))
+    serialize(&NaiveDateTime.to_iso8601(&1))
   end
 
   ###########
@@ -53,7 +47,9 @@ defmodule VtbWeb.Schema do
     field :middle_name, :string
     field :last_name, :string
     field :position, non_null(:position), resolve: dataloader(DB)
-    field :avatar, :avatar
+    field :avatar, :string, resolve: fn user, _, _ ->
+      {:ok, user.avatar && User.Avatar.url({user.avatar, user}, :thumb, signed: true)}
+    end
   end
 
   object :vote do
@@ -103,7 +99,9 @@ defmodule VtbWeb.Schema do
 
   object :attachment do
     field :title, non_null(:string)
-    field :url, non_null(:string)
+    field :url, non_null(:string), resolve: fn attachment, _, _ ->
+      {:ok, Attachment.File.url({attachment.file, attachment}, :original, signed: true)}
+    end
   end
 
   ###########
@@ -210,10 +208,27 @@ defmodule VtbWeb.Schema do
       arg(:first_name, :string)
       arg(:middle_name, :string)
       arg(:last_name, :string)
-      arg(:avatar, :upload)
 
       resolve(fn _root, args, _info ->
-        %User{} |> User.changeset(args) |> Repo.insert()
+        %User{} |> User.registration_changeset(args) |> Repo.insert()
+      end)
+    end
+
+    @desc "Update profile"
+    field :update_profile, :user do
+      arg(:email, :string)
+      arg(:password, :string)
+      arg(:first_name, :string)
+      arg(:middle_name, :string)
+      arg(:last_name, :string)
+      arg(:avatar, :upload)
+
+      resolve(fn
+        _root, args, %{context: %{current_user: %User{} = user}} ->
+          user |> User.profile_changeset(args) |> Repo.update()
+
+        _root, _args, _info ->
+          {:error, "Unauthorized"}
       end)
     end
 
@@ -226,7 +241,10 @@ defmodule VtbWeb.Schema do
 
       resolve(fn
         _root, args, %{context: %{current_user: %User{} = user}} ->
-          %Vote{creator_id: user.id} |> Vote.changeset(args) |> Repo.insert()
+          Repo.transaction(fn ->
+            result = %Vote{creator_id: user.id} |> Vote.changeset(args) |> Repo.insert()
+            with {:ok, vote} <- result, do: vote |> Attachment.add_files(args.attachments)
+          end)
 
         _root, _args, _info ->
           {:error, "Unauthorized"}
@@ -255,7 +273,11 @@ defmodule VtbWeb.Schema do
 
       resolve(fn
         _root, args, %{context: %{current_user: %User{}}} ->
-          %Topic{} |> Topic.changeset(args) |> Repo.insert()
+          Repo.transaction(fn ->
+            with {:ok, topic} <- %Topic{} |> Topic.changeset(args) |> Repo.insert() do
+              topic |> Attachment.add_files(args.attachments)
+            end
+          end)
 
         _root, _args, _info ->
           {:error, "Unauthorized"}
@@ -270,7 +292,10 @@ defmodule VtbWeb.Schema do
 
       resolve(fn
         _root, args, %{context: %{current_user: %User{} = user}} ->
-          %Message{author_id: user.id} |> Message.changeset(args) |> Repo.insert()
+          Repo.transaction(fn ->
+            result = %Message{author_id: user.id} |> Message.changeset(args) |> Repo.insert()
+            with {:ok, message} <- result, do: message |> Attachment.add_files(args.attachments)
+          end)
 
         _root, _args, _info ->
           {:error, "Unauthorized"}
@@ -298,8 +323,11 @@ defmodule VtbWeb.Schema do
       resolve(fn
         _root, %{vote_id: id}, %{context: %{current_user: %User{}}} ->
           case Vote |> Repo.get(id) do
-            %Vote{} = vote -> vote |> Ecto.Changeset.change(%{state: "cancelled"}) |> Repo.update()
-            nil -> {:error, "Not found"}
+            %Vote{} = vote ->
+              vote |> Ecto.Changeset.change(%{state: "cancelled"}) |> Repo.update()
+
+            nil ->
+              {:error, "Not found"}
           end
 
         _root, _args, _info ->

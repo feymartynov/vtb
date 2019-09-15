@@ -5,11 +5,11 @@ defmodule Vtb.Voter do
   def vote(topic_id, user_id, decision) do
     Repo.transaction(fn ->
       with {:ok, %Topic{vote: vote}} <- find_topic(topic_id),
-          :ok <- vote.state == "ongoing" && :ok || {:error, "Vote is not active"},
-          {:ok, _} <- find_participant(user_id, vote.id),
-          {:ok, voice} <- create_voice(topic_id, user_id, decision),
-          {:ok, _} <- if(needs_finish?(vote), do: finish(vote), else: {:ok, vote}),
-          do: {:ok, voice}
+           :ok <- (vote.state == "ongoing" && :ok) || {:error, "Vote is not active"},
+           {:ok, _} <- find_participant(user_id, vote.id),
+           {:ok, voice} <- create_voice(topic_id, user_id, decision),
+           {:ok, _} <- if(needs_finish?(vote), do: finish(vote), else: {:ok, vote}),
+           do: {:ok, voice}
     end)
   end
 

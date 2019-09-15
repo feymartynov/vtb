@@ -25,6 +25,8 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+config :arc, storage: Arc.Storage.Local
+
 config :vtb, Vtb.Guardian,
   allowed_algos: ["HS512"],
   verify_module: Guardian.JWT,

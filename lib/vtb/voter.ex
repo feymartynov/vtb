@@ -40,16 +40,15 @@ defmodule Vtb.Voter do
   defp needs_finish?(%Vote{id: vote_id}) do
     Participant
     |> join(:inner, [p], t in Topic, on: t.vote_id == p.vote_id)
-    |> join(:left, [p, t], v in Voice, on: v.topic_id == t.id and v.user_id == p.user_id)
+    |> join(:left, [p, t], v in Voice, on: v.topic_id == t.id and v.voter_id == p.user_id)
     |> where([p, t, v], p.vote_id == ^vote_id and is_nil(v.id))
     |> Repo.aggregate(:count, :id)
     |> Kernel.==(0)
   end
 
   defp finish(vote) do
-    vote
-    |> Ecto.Changeset.change(%{state: finish_state(vote), finished_at: NaiveDateTime.utc_now()})
-    |> Repo.update()
+    attrs = %{state: finish_state(vote), finished_at: NaiveDateTime.utc_now()}
+    vote |> Ecto.Changeset.cast(attrs, [:state, :finished_at]) |> Repo.update()
   end
 
   defp finish_state(%Vote{id: vote_id}) do

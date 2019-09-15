@@ -1,19 +1,31 @@
-# Vtb
+# Команда web 31: backend
 
-To start your Phoenix server:
+Реализованные фичи:
 
-  * Install dependencies with `mix deps.get`
-  * Create and migrate your database with `mix ecto.setup`
-  * Start Phoenix endpoint with `mix phx.server`
+* GraphQL API
+* Состояния голосвания
+* Определение конфликтов
+* Нотифкации по email
+* Аутентификация по JWT
+* Прозрачная модель данных
+* Валидация входных данных
+* Отработвка бизнес-логики для двух роле
+* Взвешенные голоса в зависимости от должности
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+## Архитектура
 
-Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+* Разделение на слои бизнес-логи (lib/vtb) и веб-приложения (lib/vtb_web)
+* Разделение GraphQL-слоя на схему и резолверы
+* Слой абстракции БД
 
-## Learn more
+## Стек
 
-  * Official website: http://www.phoenixframework.org/
-  * Guides: https://hexdocs.pm/phoenix/overview.html
-  * Docs: https://hexdocs.pm/phoenix
-  * Mailing list: http://groups.google.com/group/phoenix-talk
-  * Source: https://github.com/phoenixframework/phoenix
+* Платформа: BEAM, OTP
+* Язык: Elixir
+* Фреймворк: Phoenix
+* БД: Postgres
+* ORM: библиотека Ecto
+* GraphQL: библиотека Absinthe
+* JWT: библиотека Guardian
+* Email: бибилотека Bamboo
+* Загрузка файлов: Arc

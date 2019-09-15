@@ -205,6 +205,7 @@ defmodule VtbWeb.Schema do
     field :create_user, :user do
       arg(:email, non_null(:string))
       arg(:password, non_null(:string))
+      arg(:position_id, non_null(:integer))
       arg(:first_name, :string)
       arg(:middle_name, :string)
       arg(:last_name, :string)
@@ -221,6 +222,7 @@ defmodule VtbWeb.Schema do
       arg(:first_name, :string)
       arg(:middle_name, :string)
       arg(:last_name, :string)
+      arg(:position_id, :integer)
       arg(:avatar, :upload)
 
       resolve(fn

@@ -26,6 +26,7 @@ defmodule Vtb.User do
     |> foreign_key_constraint(:position_id)
     |> validate_required([:email, :password, :position_id])
     |> validate_format(:email, ~r/@/)
+    |> unique_constraint(:email, name: :users_email_idx)
     |> put_password_hash()
   end
 
@@ -35,6 +36,7 @@ defmodule Vtb.User do
     |> cast_attachments(attrs, [:avatar])
     |> foreign_key_constraint(:position_id)
     |> validate_format(:email, ~r/@/)
+    |> unique_constraint(:email, name: :users_email_idx)
     |> put_password_hash()
   end
 

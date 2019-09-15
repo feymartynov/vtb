@@ -26,7 +26,6 @@ defmodule VtbWeb.Schema.Vote do
   end
 
   input_object :topic_params do
-    field(:vote_id, non_null(:integer))
     field(:title, non_null(:string))
     field(:attachments, list_of(:attachment_params))
   end

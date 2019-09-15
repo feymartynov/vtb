@@ -25,13 +25,19 @@ defmodule VtbWeb.Schema.Vote do
     end
   end
 
+  input_object :topic_params do
+    field(:vote_id, non_null(:integer))
+    field(:title, non_null(:string))
+    field(:attachments, list_of(:attachment_params))
+  end
+
   object :vote_mutations do
     @desc "Create vote"
     field :create_vote, :vote do
       arg(:title, non_null(:string))
       arg(:description, :string)
       arg(:deadline, :timestamp)
-      arg(:topics, list_of(:topic))
+      arg(:topics, list_of(:topic_params))
       arg(:attachments, list_of(:attachment_params))
 
       resolve(&VoteResolver.create/3)

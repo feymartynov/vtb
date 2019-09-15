@@ -12,7 +12,8 @@ defmodule Vtb.Vote do
 
     belongs_to :creator, Vtb.User
     has_many :topics, Vtb.Topic
-    many_to_many :participants, Vtb.User, join_through: "participants"
+    has_many :participants, Vtb.Participant
+    has_many :participant_users, through: [:participants, :user]
     many_to_many :attachments, Vtb.Attachment, join_through: "vote_attachments"
   end
 
@@ -20,6 +21,7 @@ defmodule Vtb.Vote do
     schema
     |> cast(attrs, [:title, :description, :deadline])
     |> cast_assoc(:topics)
+    |> cast_assoc(:participants)
     |> cast_assoc(:attachments)
     |> validate_required([:title])
   end

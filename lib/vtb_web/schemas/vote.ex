@@ -13,7 +13,7 @@ defmodule VtbWeb.Schema.Vote do
     field :finish_date, :timestamp
     field :inserted_at, non_null(:timestamp)
     field :creator, non_null(:user), resolve: dataloader(DB)
-    field :participants, list_of(:user), resolve: dataloader(DB)
+    field :participant_users, list_of(:user), resolve: dataloader(DB)
     field :topics, list_of(:topic), resolve: dataloader(DB)
     field :attachments, list_of(:attachment), resolve: dataloader(DB)
   end
@@ -30,6 +30,10 @@ defmodule VtbWeb.Schema.Vote do
     field(:attachments, list_of(:attachment_params))
   end
 
+  input_object :participant_params do
+    field(:user_id, non_null(:integer))
+  end
+
   object :vote_mutations do
     @desc "Create vote"
     field :create_vote, :vote do
@@ -37,6 +41,7 @@ defmodule VtbWeb.Schema.Vote do
       arg(:description, :string)
       arg(:deadline, :timestamp)
       arg(:topics, list_of(:topic_params))
+      arg(:participants, list_of(:participant_params))
       arg(:attachments, list_of(:attachment_params))
 
       resolve(&VoteResolver.create/3)

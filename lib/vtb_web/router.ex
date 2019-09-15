@@ -2,6 +2,7 @@ defmodule VtbWeb.Router do
   use VtbWeb, :router
 
   pipeline :api do
+    plug CORSPlug, origin: "*"
     plug :accepts, ["json"]
     plug VtbWeb.Auth
   end
